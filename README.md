@@ -3,10 +3,23 @@
 This repository contain a Wishbone VexRiscv configuration in : <br>
 src/main/scala/misoc/cores/vexriscv DefaultMain.scala
 
+- RV32IM
+- 5 stage : F -> D -> E -> M  -> WB + fully bypassed
+- single cycle ADD/SUB/Bitwise/Shift ALU
+- i$ : 4 kB 1 way
+- d$ : 4 kB 1 way + victim buffer
+- Branch prediction => Static
+- branch/jump done in the M stage
+- memory load values are bypassed in the WB stage (late result) 
+- 33 cycle division with bypassing in the M stage (late result)
+- single cycle multiplication with bypassing in the WB stage (late result)
+- Light subset of the RISC-V machine CSR with an 32 bits external interrupt extension
+
+
 ## Requirements
 
 - Java 8
-- SBT
+- SBT (Scala build tool, kind of make file but for scala)
 
 On Debian => 
 

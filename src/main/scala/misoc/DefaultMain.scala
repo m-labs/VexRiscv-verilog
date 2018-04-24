@@ -1,24 +1,29 @@
-package misoc.cores.vexriscv
+package misoc
 
 import spinal.core._
 import spinal.lib._
 import vexriscv.ip.{DataCacheConfig, InstructionCacheConfig}
+import vexriscv.plugin.CsrAccess.WRITE_ONLY
 import vexriscv.plugin._
 import vexriscv.{VexRiscv, VexRiscvConfig, plugin}
 
 
-
-
-
+object MisocSpinalConfig extends SpinalConfig(
+  defaultConfigForClockDomains = ClockDomainConfig(
+    resetKind = spinal.core.SYNC
+  )
+)
 
 object DefaultMain{
   def main(args: Array[String]) {
-    val report = SpinalVerilog{
-
+    MisocSpinalConfig.generateVerilog{
       //CPU configuration
       val cpuConfig = VexRiscvConfig(
         plugins = List(
-          new PcManagerSimplePlugin(0x00000000l, false),
+          new PcManagerSimplePlugin(
+            resetVector = null, //null => external
+            relaxedPcCalculation = false
+          ),
           new IBusCachedPlugin(
             config = InstructionCacheConfig(
               cacheSize = 4096,
@@ -84,7 +89,7 @@ object DefaultMain{
             prediction = STATIC
           ),
           new CsrPlugin(
-            config = CsrPluginConfig.small(mtvecInit = 0x00000020l)
+            config = CsrPluginConfig.small(mtvecInit = null).copy(mtvecAccess = WRITE_ONLY)
           ),
           new ExternalInterruptArrayPlugin(),
           new YamlPlugin("cpu0.yaml")
