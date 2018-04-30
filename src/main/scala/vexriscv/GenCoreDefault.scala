@@ -1,22 +1,20 @@
-package misoc
+package vexriscv
 
 import spinal.core._
 import spinal.lib._
 import vexriscv.ip.{DataCacheConfig, InstructionCacheConfig}
 import vexriscv.plugin.CsrAccess.WRITE_ONLY
 import vexriscv.plugin._
-import vexriscv.{VexRiscv, VexRiscvConfig, plugin}
 
-
-object MisocSpinalConfig extends SpinalConfig(
+object SpinalConfig extends spinal.core.SpinalConfig(
   defaultConfigForClockDomains = ClockDomainConfig(
     resetKind = spinal.core.SYNC
   )
 )
 
-object DefaultMain{
+object GenCoreDefault{
   def main(args: Array[String]) {
-    MisocSpinalConfig.generateVerilog{
+    SpinalConfig.generateVerilog{
       //CPU configuration
       val cpuConfig = VexRiscvConfig(
         plugins = List(

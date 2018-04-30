@@ -41,7 +41,7 @@ sudo apt-get install sbt -y
 ##### Generate the verilog from default core configuration : 
 
 ```sh
-sbt compile "run-main misoc.cores.vexriscv.DefaultMain"
+sbt compile "run-main vexriscv.GenCoreDefault"
 ```
 
 Note : The first time you run it it will take time to download all dependancies (including Scala itself). You have time to drink a coffee.
