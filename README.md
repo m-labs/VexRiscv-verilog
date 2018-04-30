@@ -1,7 +1,7 @@
 
 ## General informations 
 This repository contain a Wishbone VexRiscv configuration in : <br>
-src/main/scala/misoc/cores/vexriscv DefaultMain.scala
+src/main/scala/vexriscv GenCoreDefault.scala
 
 - RV32IM
 - 5 stage : F -> D -> E -> M  -> WB + fully bypassed
