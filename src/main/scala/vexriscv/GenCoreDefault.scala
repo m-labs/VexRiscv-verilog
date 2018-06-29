@@ -6,98 +6,125 @@ import vexriscv.ip.{DataCacheConfig, InstructionCacheConfig}
 import vexriscv.plugin.CsrAccess.WRITE_ONLY
 import vexriscv.plugin._
 
+import scala.collection.mutable.ArrayBuffer
+
 object SpinalConfig extends spinal.core.SpinalConfig(
   defaultConfigForClockDomains = ClockDomainConfig(
     resetKind = spinal.core.SYNC
   )
 )
 
+case class ArgConfig(
+  debug : Boolean = false,
+  iCacheSize : Int = 4096,
+  dCacheSize : Int = 4096
+)
+
 object GenCoreDefault{
   def main(args: Array[String]) {
-    SpinalConfig.generateVerilog{
-      //CPU configuration
-      val cpuConfig = VexRiscvConfig(
-        plugins = List(
-          new PcManagerSimplePlugin(
-            resetVector = null, //null => external
-            relaxedPcCalculation = false
+    SpinalConfig.generateVerilog {
+
+      // Allow arguments to be passed ex:
+      // sbt compile "run-main vexriscv.GenCoreDefault -d --iCacheSize=1024"
+      val parser = new scopt.OptionParser[ArgConfig]("VexRiscvGen") {
+        //  ex :-d    or   --debug
+        opt[Unit]('d', "debug")    action { (_, c) => c.copy(debug = true)   } text("Enable debug")
+        // ex : -iCacheSize=XXX
+        opt[Int]("iCacheSize")     action { (v, c) => c.copy(iCacheSize = v) } text("Set instruction cache size")
+        // ex : -dCacheSize=XXX
+        opt[Int]("dCacheSize")     action { (v, c) => c.copy(dCacheSize = v) } text("Set data cache size")
+      }
+      val argConfig = parser.parse(args, ArgConfig()).get
+
+      // Generate CPU plugin list
+      val plugins = ArrayBuffer[Plugin[VexRiscv]]()
+      plugins ++= List(
+        new PcManagerSimplePlugin(
+          resetVector = null, //null => external
+          relaxedPcCalculation = false
+        ),
+        new IBusCachedPlugin(
+          config = InstructionCacheConfig(
+            cacheSize = argConfig.iCacheSize,
+            bytePerLine =32,
+            wayCount = 1,
+            addressWidth = 32,
+            cpuDataWidth = 32,
+            memDataWidth = 32,
+            catchIllegalAccess = true,
+            catchAccessFault = true,
+            catchMemoryTranslationMiss = true,
+            asyncTagMemory = false,
+            twoCycleRam = true
+          )
+        ),
+        new DBusCachedPlugin(
+          config = new DataCacheConfig(
+            cacheSize         = argConfig.dCacheSize,
+            bytePerLine       = 32,
+            wayCount          = 1,
+            addressWidth      = 32,
+            cpuDataWidth      = 32,
+            memDataWidth      = 32,
+            catchAccessError  = true,
+            catchIllegal      = true,
+            catchUnaligned    = true,
+            catchMemoryTranslationMiss = true
           ),
-          new IBusCachedPlugin(
-            config = InstructionCacheConfig(
-              cacheSize = 4096,
-              bytePerLine =32,
-              wayCount = 1,
-              addressWidth = 32,
-              cpuDataWidth = 32,
-              memDataWidth = 32,
-              catchIllegalAccess = true,
-              catchAccessFault = true,
-              catchMemoryTranslationMiss = true,
-              asyncTagMemory = false,
-              twoCycleRam = true
-            )
-          ),
-          new DBusCachedPlugin(
-            config = new DataCacheConfig(
-              cacheSize         = 4096,
-              bytePerLine       = 32,
-              wayCount          = 1,
-              addressWidth      = 32,
-              cpuDataWidth      = 32,
-              memDataWidth      = 32,
-              catchAccessError  = true,
-              catchIllegal      = true,
-              catchUnaligned    = true,
-              catchMemoryTranslationMiss = true
-            ),
-            memoryTranslatorPortConfig = null,
-            csrInfo = true
-          ),
-          new StaticMemoryTranslatorPlugin(
-            ioRange      = _.msb
-          ),
-          new DecoderSimplePlugin(
-            catchIllegalInstruction = true
-          ),
-          new RegFilePlugin(
-            regFileReadyKind = plugin.SYNC,
-            zeroBoot = false
-          ),
-          new IntAluPlugin,
-          new SrcPlugin(
-            separatedAddSub = false,
-            executeInsertion = true
-          ),
-          new FullBarrielShifterPlugin,
-          new MulPlugin,
-          new DivPlugin,
-          new HazardSimplePlugin(
-            bypassExecute           = true,
-            bypassMemory            = true,
-            bypassWriteBack         = true,
-            bypassWriteBackBuffer   = true,
-            pessimisticUseSrc       = false,
-            pessimisticWriteRegFile = false,
-            pessimisticAddressMatch = false
-          ),
-          //          new DebugPlugin(ClockDomain.current.clone(reset = Bool().setName("debugReset"))),
-          new BranchPlugin(
-            earlyBranch = false,
-            catchAddressMisaligned = true,
-            prediction = STATIC
-          ),
-          new CsrPlugin(
-            config = CsrPluginConfig.small(mtvecInit = null).copy(mtvecAccess = WRITE_ONLY)
-          ),
-          new ExternalInterruptArrayPlugin(),
-          new YamlPlugin("cpu0.yaml")
-        )
+          memoryTranslatorPortConfig = null,
+          csrInfo = true
+        ),
+        new StaticMemoryTranslatorPlugin(
+          ioRange      = _.msb
+        ),
+        new DecoderSimplePlugin(
+          catchIllegalInstruction = true
+        ),
+        new RegFilePlugin(
+          regFileReadyKind = plugin.SYNC,
+          zeroBoot = false
+        ),
+        new IntAluPlugin,
+        new SrcPlugin(
+          separatedAddSub = false,
+          executeInsertion = true
+        ),
+        new FullBarrielShifterPlugin,
+        new MulPlugin,
+        new DivPlugin,
+        new HazardSimplePlugin(
+          bypassExecute           = true,
+          bypassMemory            = true,
+          bypassWriteBack         = true,
+          bypassWriteBackBuffer   = true,
+          pessimisticUseSrc       = false,
+          pessimisticWriteRegFile = false,
+          pessimisticAddressMatch = false
+        ),
+        new BranchPlugin(
+          earlyBranch = false,
+          catchAddressMisaligned = true,
+          prediction = STATIC
+        ),
+        new CsrPlugin(
+          config = CsrPluginConfig.small(mtvecInit = null).copy(mtvecAccess = WRITE_ONLY)
+        ),
+        new ExternalInterruptArrayPlugin(),
+        new YamlPlugin("cpu0.yaml")
       )
 
-      //CPU instanciation
+      // Add in the Debug plugin, if requested
+      if(argConfig.debug) {
+        plugins += new DebugPlugin(ClockDomain.current.clone(reset = Bool().setName("debugReset")))
+      }
+
+      // CPU configuration
+      val cpuConfig = VexRiscvConfig(plugins.toList)
+
+      // CPU instantiation
       val cpu = new VexRiscv(cpuConfig)
 
-      //CPU modifications to be an Wishbone one
+      // CPU modifications to be an Wishbone one
       cpu.rework {
         for (plugin <- cpuConfig.plugins) plugin match {
 
