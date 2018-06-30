@@ -14,6 +14,7 @@ src/main/scala/vexriscv GenCoreDefault.scala
 - 33 cycle division with bypassing in the M stage (late result)
 - single cycle multiplication with bypassing in the WB stage (late result)
 - Light subset of the RISC-V machine CSR with an 32 bits external interrupt extension
+- Available in normal an -Debug, with the Debug bus exposed
 
 
 ## Requirements
@@ -66,4 +67,16 @@ If you want you can also use a local folder as a VexRiscv version :
 lazy val vexRiscv = RootProject(file("local/path/to/the/VexRiscv"))
 ```
 
+##### Configuration options :
 
+VexRiscv supports several configuration options:
+
+* **-d**: If specified, builds VexRiscv with a debug bus
+* **-dCacheSize=**_cacheSize_: Specify the data cache size.  Defaults to 4096.
+* **-iCacheSize=**_cacheSize_: Specify the instruction cache size.  Defaults to 4096.
+
+As an example, you can build a VexRiscv core with a 2048-byte cache size by running:
+
+```sh
+sbt compile "run-main vexriscv.GenCoreDefault -d --iCacheSize=2048"
+```
