@@ -39,11 +39,10 @@ object GenCoreDefault{
       // Generate CPU plugin list
       val plugins = ArrayBuffer[Plugin[VexRiscv]]()
       plugins ++= List(
-        new PcManagerSimplePlugin(
-          resetVector = null, //null => external
-          relaxedPcCalculation = false
-        ),
         new IBusCachedPlugin(
+          resetVector = null,
+          relaxedPcCalculation = false,
+          prediction = STATIC,
           config = InstructionCacheConfig(
             cacheSize = argConfig.iCacheSize,
             bytePerLine =32,
@@ -55,7 +54,8 @@ object GenCoreDefault{
             catchAccessFault = true,
             catchMemoryTranslationMiss = true,
             asyncTagMemory = false,
-            twoCycleRam = true
+            twoCycleRam = true,
+            twoCycleCache = true
           )
         ),
         new DBusCachedPlugin(
@@ -89,7 +89,7 @@ object GenCoreDefault{
           separatedAddSub = false,
           executeInsertion = true
         ),
-        new FullBarrielShifterPlugin,
+        new FullBarrelShifterPlugin,
         new MulPlugin,
         new DivPlugin,
         new HazardSimplePlugin(
@@ -103,13 +103,15 @@ object GenCoreDefault{
         ),
         new BranchPlugin(
           earlyBranch = false,
-          catchAddressMisaligned = true,
-          prediction = STATIC
+          catchAddressMisaligned = true
         ),
         new CsrPlugin(
           config = CsrPluginConfig.small(mtvecInit = null).copy(mtvecAccess = WRITE_ONLY)
         ),
-        new ExternalInterruptArrayPlugin(),
+        new ExternalInterruptArrayPlugin(
+          maskCsrId = 0xBC0,
+          pendingsCsrId = 0xFC0
+        ),
         new YamlPlugin("cpu0.yaml")
       )
 
