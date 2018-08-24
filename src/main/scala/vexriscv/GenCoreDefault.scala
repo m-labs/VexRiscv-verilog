@@ -41,9 +41,9 @@ object GenCoreDefault{
         //  ex :-d    or   --debug
         opt[Unit]('d', "debug")    action { (_, c) => c.copy(debug = true)   } text("Enable debug")
         // ex : -iCacheSize=XXX
-        opt[Int]("iCacheSize")     action { (v, c) => c.copy(iCacheSize = v) } text("Set instruction cache size, -1 mean no cache")
+        opt[Int]("iCacheSize")     action { (v, c) => c.copy(iCacheSize = v) } text("Set instruction cache size, 0 mean no cache")
         // ex : -dCacheSize=XXX
-        opt[Int]("dCacheSize")     action { (v, c) => c.copy(dCacheSize = v) } text("Set data cache size, -1 mean no cache")
+        opt[Int]("dCacheSize")     action { (v, c) => c.copy(dCacheSize = v) } text("Set data cache size, 0 mean no cache")
         opt[Boolean]("mulDiv")    action { (v, c) => c.copy(mulDiv = v)   } text("set RV32IM")
         opt[Boolean]("bypass")    action { (v, c) => c.copy(bypass = v)   } text("set pipeline interlock/bypass")
         opt[Boolean]("externalInterruptArray")    action { (v, c) => c.copy(externalInterruptArray = v)   } text("switch between regular CSR and array like one")
@@ -55,7 +55,7 @@ object GenCoreDefault{
       val plugins = ArrayBuffer[Plugin[VexRiscv]]()
 
       plugins ++= List(
-        if(argConfig.iCacheSize == -1){
+        if(argConfig.iCacheSize <= 0){
           new IBusSimplePlugin(
             resetVector = null,
             prediction = argConfig.prediction
@@ -82,7 +82,7 @@ object GenCoreDefault{
           )
         },
 
-        if(argConfig.dCacheSize == -1){
+        if(argConfig.dCacheSize <= 0){
           new DBusSimplePlugin(
             catchAddressMisaligned = false,
             catchAccessFault = false
