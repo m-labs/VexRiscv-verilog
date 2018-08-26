@@ -19,6 +19,7 @@ case class ArgConfig(
   iCacheSize : Int = 4096,
   dCacheSize : Int = 4096,
   mulDiv : Boolean = true,
+  singleCycleMulDiv : Boolean = true,
   bypass : Boolean = true,
   externalInterruptArray : Boolean = true,
   prediction : BranchPrediction = STATIC
@@ -45,6 +46,7 @@ object GenCoreDefault{
         // ex : -dCacheSize=XXX
         opt[Int]("dCacheSize")     action { (v, c) => c.copy(dCacheSize = v) } text("Set data cache size, 0 mean no cache")
         opt[Boolean]("mulDiv")    action { (v, c) => c.copy(mulDiv = v)   } text("set RV32IM")
+        opt[Boolean]("singleCycleMulDiv")    action { (v, c) => c.copy(singleCycleMulDiv = v)   } text("If true, MUL/DIV/Shifts are single-cycle")
         opt[Boolean]("bypass")    action { (v, c) => c.copy(bypass = v)   } text("set pipeline interlock/bypass")
         opt[Boolean]("externalInterruptArray")    action { (v, c) => c.copy(externalInterruptArray = v)   } text("switch between regular CSR and array like one")
         opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
@@ -121,7 +123,11 @@ object GenCoreDefault{
           separatedAddSub = false,
           executeInsertion = true
         ),
-        new FullBarrelShifterPlugin,
+        if(argConfig.singleCycleMulDiv) {
+          new FullBarrelShifterPlugin
+        }else {
+          new LightShifterPlugin
+        },
         new HazardSimplePlugin(
           bypassExecute           = argConfig.bypass,
           bypassMemory            = argConfig.bypass,
@@ -141,10 +147,23 @@ object GenCoreDefault{
         new YamlPlugin("cpu0.yaml")
       )
 
-      if(argConfig.mulDiv) plugins ++= List(
-        new MulPlugin,
-        new DivPlugin
-      )
+      if(argConfig.mulDiv) {
+        if(argConfig.singleCycleMulDiv) {
+          plugins ++= List(
+            new MulPlugin,
+            new DivPlugin
+          )
+        }else {
+          plugins ++= List(
+            new MulDivIterativePlugin(
+              genMul = true,
+              genDiv = true,
+              mulUnrollFactor = 1,
+              divUnrollFactor = 1
+            )
+          )
+        }
+      }
 
       if(argConfig.externalInterruptArray) plugins ++= List(
         new ExternalInterruptArrayPlugin(
