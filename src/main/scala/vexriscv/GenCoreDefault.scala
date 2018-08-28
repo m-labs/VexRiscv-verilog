@@ -22,7 +22,8 @@ case class ArgConfig(
   singleCycleMulDiv : Boolean = true,
   bypass : Boolean = true,
   externalInterruptArray : Boolean = true,
-  prediction : BranchPrediction = STATIC
+  prediction : BranchPrediction = STATIC,
+  outputFile : String = "VexRiscv"
 )
 
 object GenCoreDefault{
@@ -50,6 +51,7 @@ object GenCoreDefault{
         opt[Boolean]("bypass")    action { (v, c) => c.copy(bypass = v)   } text("set pipeline interlock/bypass")
         opt[Boolean]("externalInterruptArray")    action { (v, c) => c.copy(externalInterruptArray = v)   } text("switch between regular CSR and array like one")
         opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
+        opt[String]("outputFile")    action { (v, c) => c.copy(outputFile = v) } text("output file name")
       }
       val argConfig = parser.parse(args, ArgConfig()).get
 
@@ -144,7 +146,7 @@ object GenCoreDefault{
         new CsrPlugin(
           config = CsrPluginConfig.small(mtvecInit = null).copy(mtvecAccess = WRITE_ONLY)
         ),
-        new YamlPlugin("cpu0.yaml")
+        new YamlPlugin(argConfig.outputFile.concat(".yaml"))
       )
 
       if(argConfig.mulDiv) {
@@ -181,7 +183,7 @@ object GenCoreDefault{
       val cpuConfig = VexRiscvConfig(plugins.toList)
 
       // CPU instantiation
-      val cpu = new VexRiscv(cpuConfig)
+      val cpu = new VexRiscv(cpuConfig).setDefinitionName(argConfig.outputFile)
 
       // CPU modifications to be an Wishbone one
       cpu.rework {
