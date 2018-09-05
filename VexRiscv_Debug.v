@@ -1,6 +1,6 @@
 // Generator : SpinalHDL v1.1.6    git head : 2643ea2afba86dc6321cd50da8126412cf13d7ec
-// Date      : 06/09/2018, 01:17:18
-// Component : VexRiscv_Debug
+// Date      : 06/09/2018, 01:55:20
+// Component : VexRiscv
 
 
 `define EnvCtrlEnum_binary_sequancial_type [1:0]
@@ -1171,7 +1171,7 @@ module DataCache (
 
 endmodule
 
-module VexRiscv_Debug (
+module VexRiscv (
       input  [31:0] externalResetVector,
       input   timerInterrupt,
       input  [31:0] externalInterruptArray,
@@ -1993,8 +1993,8 @@ module VexRiscv_Debug (
   reg  CsrPlugin_mcause_interrupt;
   reg [3:0] CsrPlugin_mcause_exceptionCode;
   reg [31:0] CsrPlugin_mbadaddr;
-  reg [63:0] CsrPlugin_mcycle = 64'b1101110000100010110010001011101001110000010100010110101110111001;
-  reg [63:0] CsrPlugin_minstret = 64'b0111000010111100011010001110101011001000101101110001110110000010;
+  reg [63:0] CsrPlugin_mcycle = 64'b0000100001011101110001001100001010110011101110100001110101000101;
+  reg [63:0] CsrPlugin_minstret = 64'b0110011001000001101010010011100011010000110001011100101101001000;
   reg  CsrPlugin_exceptionPortCtrl_exceptionValids_decode;
   reg  CsrPlugin_exceptionPortCtrl_exceptionValids_execute;
   reg  CsrPlugin_exceptionPortCtrl_exceptionValids_memory;

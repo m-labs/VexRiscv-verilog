@@ -1,6 +1,6 @@
 // Generator : SpinalHDL v1.1.6    git head : 2643ea2afba86dc6321cd50da8126412cf13d7ec
-// Date      : 06/09/2018, 01:17:50
-// Component : VexRiscv_MinDebug
+// Date      : 06/09/2018, 01:55:56
+// Component : VexRiscv
 
 
 `define BranchCtrlEnum_binary_sequancial_type [1:0]
@@ -150,7 +150,7 @@ module StreamFifoLowLatency (
 
 endmodule
 
-module VexRiscv_MinDebug (
+module VexRiscv (
       input  [31:0] externalResetVector,
       input   timerInterrupt,
       input  [31:0] externalInterruptArray,
@@ -736,8 +736,8 @@ module VexRiscv_MinDebug (
   reg  CsrPlugin_mcause_interrupt;
   reg [3:0] CsrPlugin_mcause_exceptionCode;
   reg [31:0] CsrPlugin_mbadaddr;
-  reg [63:0] CsrPlugin_mcycle = 64'b0110000010101001000101100000010111101000010010111100111001101101;
-  reg [63:0] CsrPlugin_minstret = 64'b1100110101001010011110000101111011000100011010001110001001000110;
+  reg [63:0] CsrPlugin_mcycle = 64'b1000100101100111000110101110111101000100101101111001110100100100;
+  reg [63:0] CsrPlugin_minstret = 64'b0100000101010111011010100111110110101010010111110011111101011110;
   reg  CsrPlugin_exceptionPortCtrl_exceptionValids_decode;
   reg  CsrPlugin_exceptionPortCtrl_exceptionValids_execute;
   reg  CsrPlugin_exceptionPortCtrl_exceptionValids_memory;

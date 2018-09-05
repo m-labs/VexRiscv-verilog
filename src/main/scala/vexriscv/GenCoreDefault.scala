@@ -27,34 +27,34 @@ case class ArgConfig(
 )
 
 object GenCoreDefault{
+  val predictionMap = Map(
+    "none" -> NONE,
+    "static" -> STATIC,
+    "dynamic" -> DYNAMIC,
+    "dynamic_target" -> DYNAMIC_TARGET
+  )
+
   def main(args: Array[String]) {
-    SpinalConfig.generateVerilog {
 
-      val predictionMap = Map(
-        "none" -> NONE,
-        "static" -> STATIC,
-        "dynamic" -> DYNAMIC,
-        "dynamic_target" -> DYNAMIC_TARGET
-      )
+    // Allow arguments to be passed ex:
+    // sbt compile "run-main vexriscv.GenCoreDefault -d --iCacheSize=1024"
+    val parser = new scopt.OptionParser[ArgConfig]("VexRiscvGen") {
+      //  ex :-d    or   --debug
+      opt[Unit]('d', "debug")    action { (_, c) => c.copy(debug = true)   } text("Enable debug")
+      // ex : -iCacheSize=XXX
+      opt[Int]("iCacheSize")     action { (v, c) => c.copy(iCacheSize = v) } text("Set instruction cache size, 0 mean no cache")
+      // ex : -dCacheSize=XXX
+      opt[Int]("dCacheSize")     action { (v, c) => c.copy(dCacheSize = v) } text("Set data cache size, 0 mean no cache")
+      opt[Boolean]("mulDiv")    action { (v, c) => c.copy(mulDiv = v)   } text("set RV32IM")
+      opt[Boolean]("singleCycleMulDiv")    action { (v, c) => c.copy(singleCycleMulDiv = v)   } text("If true, MUL/DIV/Shifts are single-cycle")
+      opt[Boolean]("bypass")    action { (v, c) => c.copy(bypass = v)   } text("set pipeline interlock/bypass")
+      opt[Boolean]("externalInterruptArray")    action { (v, c) => c.copy(externalInterruptArray = v)   } text("switch between regular CSR and array like one")
+      opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
+      opt[String]("outputFile")    action { (v, c) => c.copy(outputFile = v) } text("output file name")
+    }
+    val argConfig = parser.parse(args, ArgConfig()).get
 
-      // Allow arguments to be passed ex:
-      // sbt compile "run-main vexriscv.GenCoreDefault -d --iCacheSize=1024"
-      val parser = new scopt.OptionParser[ArgConfig]("VexRiscvGen") {
-        //  ex :-d    or   --debug
-        opt[Unit]('d', "debug")    action { (_, c) => c.copy(debug = true)   } text("Enable debug")
-        // ex : -iCacheSize=XXX
-        opt[Int]("iCacheSize")     action { (v, c) => c.copy(iCacheSize = v) } text("Set instruction cache size, 0 mean no cache")
-        // ex : -dCacheSize=XXX
-        opt[Int]("dCacheSize")     action { (v, c) => c.copy(dCacheSize = v) } text("Set data cache size, 0 mean no cache")
-        opt[Boolean]("mulDiv")    action { (v, c) => c.copy(mulDiv = v)   } text("set RV32IM")
-        opt[Boolean]("singleCycleMulDiv")    action { (v, c) => c.copy(singleCycleMulDiv = v)   } text("If true, MUL/DIV/Shifts are single-cycle")
-        opt[Boolean]("bypass")    action { (v, c) => c.copy(bypass = v)   } text("set pipeline interlock/bypass")
-        opt[Boolean]("externalInterruptArray")    action { (v, c) => c.copy(externalInterruptArray = v)   } text("switch between regular CSR and array like one")
-        opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
-        opt[String]("outputFile")    action { (v, c) => c.copy(outputFile = v) } text("output file name")
-      }
-      val argConfig = parser.parse(args, ArgConfig()).get
-
+    SpinalConfig.copy(netlistFileName = argConfig.outputFile + ".v").generateVerilog {
       // Generate CPU plugin list
       val plugins = ArrayBuffer[Plugin[VexRiscv]]()
 
@@ -183,7 +183,7 @@ object GenCoreDefault{
       val cpuConfig = VexRiscvConfig(plugins.toList)
 
       // CPU instantiation
-      val cpu = new VexRiscv(cpuConfig).setDefinitionName(argConfig.outputFile)
+      val cpu = new VexRiscv(cpuConfig)
 
       // CPU modifications to be an Wishbone one
       cpu.rework {
