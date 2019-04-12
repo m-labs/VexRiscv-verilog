@@ -1,4 +1,4 @@
-all: VexRiscv.v VexRiscv_Debug.v VexRiscv_Lite.v VexRiscv_LiteDebug.v VexRiscv_Min.v VexRiscv_MinDebug.v
+all: VexRiscv.v VexRiscv_Debug.v VexRiscv_Lite.v VexRiscv_LiteDebug.v VexRiscv_Min.v VexRiscv_MinDebug.v VexRiscv_Full.v VexRiscv_FullDebug.v
 
 VexRiscv.v:
 	sbt compile "run-main vexriscv.GenCoreDefault"
@@ -17,3 +17,9 @@ VexRiscv_Min.v:
 
 VexRiscv_MinDebug.v:
 	sbt compile "run-main vexriscv.GenCoreDefault -d --iCacheSize 0 --dCacheSize 0 --mulDiv false --singleCycleMulDiv false --bypass false --prediction none --outputFile VexRiscv_MinDebug"
+
+VexRiscv_Full.v:
+	sbt compile "run-main vexriscv.GenCoreDefault --csrPluginConfig all --outputFile VexRiscv_Full"
+
+VexRiscv_FullDebug.v:
+	sbt compile "run-main vexriscv.GenCoreDefault --csrPluginConfig all -d --outputFile VexRiscv_FullDebug"
