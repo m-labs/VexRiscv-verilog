@@ -23,7 +23,8 @@ case class ArgConfig(
   bypass : Boolean = true,
   externalInterruptArray : Boolean = true,
   prediction : BranchPrediction = STATIC,
-  outputFile : String = "VexRiscv"
+  outputFile : String = "VexRiscv",
+  csrPluginConfig : String = "small"
 )
 
 object GenCoreDefault{
@@ -51,6 +52,7 @@ object GenCoreDefault{
       opt[Boolean]("externalInterruptArray")    action { (v, c) => c.copy(externalInterruptArray = v)   } text("switch between regular CSR and array like one")
       opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
       opt[String]("outputFile")    action { (v, c) => c.copy(outputFile = v) } text("output file name")
+      opt[String]("csrPluginConfig")  action { (v, c) => c.copy(csrPluginConfig = v) } text("switch between 'small' and 'all' version of control and status registers configuration")
     }
     val argConfig = parser.parse(args, ArgConfig()).get
 
@@ -144,7 +146,11 @@ object GenCoreDefault{
           catchAddressMisaligned = true
         ),
         new CsrPlugin(
-          config = CsrPluginConfig.small(mtvecInit = null).copy(mtvecAccess = WRITE_ONLY)
+          if(argConfig.csrPluginConfig == "all") {
+            CsrPluginConfig.all(mtvecInit = null)
+          }else {
+            CsrPluginConfig.small(mtvecInit = null).copy(mtvecAccess = WRITE_ONLY)
+          }
         ),
         new YamlPlugin(argConfig.outputFile.concat(".yaml"))
       )
