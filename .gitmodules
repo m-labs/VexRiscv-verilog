@@ -1,0 +1,6 @@
+[submodule "ext/VexRiscv"]
+	path = ext/VexRiscv
+	url = ../../SpinalHDL/VexRiscv.git
+[submodule "ext/SpinalHDL"]
+	path = ext/SpinalHDL
+	url = ../../SpinalHDL/SpinalHDL.git

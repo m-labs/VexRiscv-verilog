@@ -22,6 +22,7 @@ case class ArgConfig(
   singleCycleMulDiv : Boolean = true,
   bypass : Boolean = true,
   externalInterruptArray : Boolean = true,
+  resetVector : BigInt = null,
   prediction : BranchPrediction = STATIC,
   outputFile : String = "VexRiscv",
   csrPluginConfig : String = "small"
@@ -50,11 +51,13 @@ object GenCoreDefault{
       opt[Boolean]("singleCycleMulDiv")    action { (v, c) => c.copy(singleCycleMulDiv = v)   } text("If true, MUL/DIV/Shifts are single-cycle")
       opt[Boolean]("bypass")    action { (v, c) => c.copy(bypass = v)   } text("set pipeline interlock/bypass")
       opt[Boolean]("externalInterruptArray")    action { (v, c) => c.copy(externalInterruptArray = v)   } text("switch between regular CSR and array like one")
+      opt[String]("resetVector")    action { (v, c) => c.copy(resetVector = BigInt(if(v.startsWith("0x")) v.tail.tail else v, 16))   } text("Specify the CPU reset vector in hexadecimal. If not specified, an 32 bits input is added to the CPU to set durring instanciation")
       opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
       opt[String]("outputFile")    action { (v, c) => c.copy(outputFile = v) } text("output file name")
-      opt[String]("csrPluginConfig")  action { (v, c) => c.copy(csrPluginConfig = v) } text("switch between 'small' and 'all' version of control and status registers configuration")
+      opt[String]("csrPluginConfig")  action { (v, c) => c.copy(csrPluginConfig = v) } text("switch between 'small', 'all' and 'linux' version of control and status registers configuration")
     }
     val argConfig = parser.parse(args, ArgConfig()).get
+    val linux = argConfig.csrPluginConfig == "linux"
 
     SpinalConfig.copy(netlistFileName = argConfig.outputFile + ".v").generateVerilog {
       // Generate CPU plugin list
@@ -63,14 +66,18 @@ object GenCoreDefault{
       plugins ++= List(
         if(argConfig.iCacheSize <= 0){
           new IBusSimplePlugin(
-            resetVector = null,
-            prediction = argConfig.prediction
+            resetVector = argConfig.resetVector,
+            prediction = argConfig.prediction,
+            cmdForkOnSecondStage = false,
+            cmdForkPersistence = false,
+            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4)
           )
         }else {
           new IBusCachedPlugin(
-            resetVector = null,
+            resetVector = argConfig.resetVector,
             relaxedPcCalculation = false,
             prediction = argConfig.prediction,
+            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4),
             config = InstructionCacheConfig(
               cacheSize = argConfig.iCacheSize,
               bytePerLine = 32,
@@ -80,9 +87,8 @@ object GenCoreDefault{
               memDataWidth = 32,
               catchIllegalAccess = true,
               catchAccessFault = true,
-              catchMemoryTranslationMiss = true,
               asyncTagMemory = false,
-              twoCycleRam = true,
+              twoCycleRam = false,
               twoCycleCache = true
             )
           )
@@ -90,11 +96,16 @@ object GenCoreDefault{
 
         if(argConfig.dCacheSize <= 0){
           new DBusSimplePlugin(
-            catchAddressMisaligned = false,
-            catchAccessFault = false
+            catchAddressMisaligned = true,
+            catchAccessFault = true,
+            withLrSc = linux,
+            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4)
           )
         }else {
           new DBusCachedPlugin(
+            dBusCmdMasterPipe = true,
+            dBusCmdSlavePipe = true,
+            dBusRspSlavePipe = false,
             config = new DataCacheConfig(
               cacheSize = argConfig.dCacheSize,
               bytePerLine = 32,
@@ -105,14 +116,16 @@ object GenCoreDefault{
               catchAccessError = true,
               catchIllegal = true,
               catchUnaligned = true,
-              catchMemoryTranslationMiss = true
+              withLrSc = linux,
+              withAmo = linux
             ),
-            memoryTranslatorPortConfig = null,
+            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4),
             csrInfo = true
           )
         },
-
-        new StaticMemoryTranslatorPlugin(
+        if(linux) new MmuPlugin(
+          ioRange = (x => x(31 downto 28) === 0xB || x(31 downto 28) === 0xE || x(31 downto 28) === 0xF)
+        )  else new StaticMemoryTranslatorPlugin(
           ioRange      = _.msb
         ),
         new DecoderSimplePlugin(
@@ -146,10 +159,10 @@ object GenCoreDefault{
           catchAddressMisaligned = true
         ),
         new CsrPlugin(
-          if(argConfig.csrPluginConfig == "all") {
-            CsrPluginConfig.all(mtvecInit = null)
-          }else {
-            CsrPluginConfig.small(mtvecInit = null).copy(mtvecAccess = WRITE_ONLY)
+          argConfig.csrPluginConfig match {
+            case "small" => CsrPluginConfig.small(mtvecInit = null).copy(mtvecAccess = WRITE_ONLY)
+            case "all" => CsrPluginConfig.all(mtvecInit = null)
+            case "linux" => CsrPluginConfig.linuxFull(mtVecInit = null).copy(ebreakGen = false)
           }
         ),
         new YamlPlugin(argConfig.outputFile.concat(".yaml"))
@@ -195,19 +208,19 @@ object GenCoreDefault{
       cpu.rework {
         for (plugin <- cpuConfig.plugins) plugin match {
           case plugin: IBusSimplePlugin => {
-            plugin.iBus.asDirectionLess() //Unset IO properties of iBus
+            plugin.iBus.setAsDirectionLess() //Unset IO properties of iBus
             master(plugin.iBus.toWishbone()).setName("iBusWishbone")
           }
           case plugin: IBusCachedPlugin => {
-            plugin.iBus.asDirectionLess()
+            plugin.iBus.setAsDirectionLess()
             master(plugin.iBus.toWishbone()).setName("iBusWishbone")
           }
           case plugin: DBusSimplePlugin => {
-            plugin.dBus.asDirectionLess()
+            plugin.dBus.setAsDirectionLess()
             master(plugin.dBus.toWishbone()).setName("dBusWishbone")
           }
           case plugin: DBusCachedPlugin => {
-            plugin.dBus.asDirectionLess()
+            plugin.dBus.setAsDirectionLess()
             master(plugin.dBus.toWishbone()).setName("dBusWishbone")
           }
           case _ =>
