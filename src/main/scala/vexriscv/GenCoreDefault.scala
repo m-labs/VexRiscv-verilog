@@ -23,6 +23,7 @@ case class ArgConfig(
   bypass : Boolean = true,
   externalInterruptArray : Boolean = true,
   resetVector : BigInt = null,
+  machineTrapVector : BigInt = null,
   prediction : BranchPrediction = STATIC,
   outputFile : String = "VexRiscv",
   csrPluginConfig : String = "small"
@@ -52,6 +53,7 @@ object GenCoreDefault{
       opt[Boolean]("bypass")    action { (v, c) => c.copy(bypass = v)   } text("set pipeline interlock/bypass")
       opt[Boolean]("externalInterruptArray")    action { (v, c) => c.copy(externalInterruptArray = v)   } text("switch between regular CSR and array like one")
       opt[String]("resetVector")    action { (v, c) => c.copy(resetVector = BigInt(if(v.startsWith("0x")) v.tail.tail else v, 16))   } text("Specify the CPU reset vector in hexadecimal. If not specified, an 32 bits input is added to the CPU to set durring instanciation")
+      opt[String]("machineTrapVector")    action { (v, c) => c.copy(machineTrapVector = BigInt(if(v.startsWith("0x")) v.tail.tail else v, 16))   } text("Specify the CPU machine trap vector in hexadecimal. If not specified, it take a unknown value when the design boot")
       opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
       opt[String]("outputFile")    action { (v, c) => c.copy(outputFile = v) } text("output file name")
       opt[String]("csrPluginConfig")  action { (v, c) => c.copy(csrPluginConfig = v) } text("switch between 'small', 'all' and 'linux' version of control and status registers configuration")
@@ -160,9 +162,9 @@ object GenCoreDefault{
         ),
         new CsrPlugin(
           argConfig.csrPluginConfig match {
-            case "small" => CsrPluginConfig.small(mtvecInit = null).copy(mtvecAccess = WRITE_ONLY)
-            case "all" => CsrPluginConfig.all(mtvecInit = null)
-            case "linux" => CsrPluginConfig.linuxFull(mtVecInit = null).copy(ebreakGen = false)
+            case "small" => CsrPluginConfig.small(mtvecInit = argConfig.machineTrapVector).copy(mtvecAccess = WRITE_ONLY)
+            case "all" => CsrPluginConfig.all(mtvecInit = argConfig.machineTrapVector)
+            case "linux" => CsrPluginConfig.linuxFull(mtVecInit = argConfig.machineTrapVector).copy(ebreakGen = false)
           }
         ),
         new YamlPlugin(argConfig.outputFile.concat(".yaml"))
