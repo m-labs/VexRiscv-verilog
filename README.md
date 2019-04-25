@@ -42,7 +42,7 @@ sudo apt-get install sbt -y
 ##### Generate the verilog from default core configuration :
 
 ```sh
-sbt compile "run-main vexriscv.GenCoreDefault"
+sbt "runMain vexriscv.GenCoreDefault"
 ```
 
 Note : The first time you run it it will take time to download all dependancies (including Scala itself). You have time to drink a coffee.
@@ -80,11 +80,11 @@ VexRiscv supports several configuration options:
 As an example, you can build a VexRiscv core with a 2048-byte cache size by running:
 
 ```sh
-sbt compile "run-main vexriscv.GenCoreDefault -d --iCacheSize=2048"
+sbt "runMain vexriscv.GenCoreDefault -d --iCacheSize=2048"
 ```
 
 `VexRiscv-Lite.v` was built using:
 
 ```sh
-sbt compile "run-main vexriscv.GenCoreDefault --iCacheSize 2048 --dCacheSize 0 --mulDiv true --singleCycleMulDiv false"
+sbt "runMain vexriscv.GenCoreDefault --iCacheSize 2048 --dCacheSize 0 --mulDiv true --singleCycleMulDiv false"
 ```
