@@ -71,7 +71,7 @@ object GenCoreDefault{
             resetVector = argConfig.resetVector,
             prediction = argConfig.prediction,
             cmdForkOnSecondStage = false,
-            cmdForkPersistence = false,
+            cmdForkPersistence = false, //Not required as the wishbone bridge ensure it
             memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4)
           )
         }else {
