@@ -1,7 +1,9 @@
 package vexriscv
 
 import spinal.core._
+import spinal.core.internals.{ExpressionContainer, PhaseAllocateNames, PhaseContext}
 import spinal.lib._
+import spinal.lib.sim.Phase
 import vexriscv.ip.{DataCacheConfig, InstructionCacheConfig}
 import vexriscv.plugin.CsrAccess.WRITE_ONLY
 import vexriscv.plugin._
@@ -12,7 +14,10 @@ object SpinalConfig extends spinal.core.SpinalConfig(
   defaultConfigForClockDomains = ClockDomainConfig(
     resetKind = spinal.core.SYNC
   )
-)
+){
+  //Insert a compilation phase which will add a  (* ram_style = "block" *) on all synchronous rams.
+  phasesInserters += {(array) => array.insert(array.indexWhere(_.isInstanceOf[PhaseAllocateNames]) + 1, new ForceRamBlockPhase)}
+}
 
 case class ArgConfig(
   debug : Boolean = false,
@@ -56,10 +61,10 @@ object GenCoreDefault{
       opt[String]("machineTrapVector")    action { (v, c) => c.copy(machineTrapVector = BigInt(if(v.startsWith("0x")) v.tail.tail else v, 16))   } text("Specify the CPU machine trap vector in hexadecimal. If not specified, it take a unknown value when the design boot")
       opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
       opt[String]("outputFile")    action { (v, c) => c.copy(outputFile = v) } text("output file name")
-      opt[String]("csrPluginConfig")  action { (v, c) => c.copy(csrPluginConfig = v) } text("switch between 'small', 'all' and 'linux' version of control and status registers configuration")
+      opt[String]("csrPluginConfig")  action { (v, c) => c.copy(csrPluginConfig = v) } text("switch between 'small', 'all', 'linux' and 'linux-minimal' version of control and status registers configuration")
     }
     val argConfig = parser.parse(args, ArgConfig()).get
-    val linux = argConfig.csrPluginConfig == "linux"
+    val linux = argConfig.csrPluginConfig.startsWith("linux")
 
     SpinalConfig.copy(netlistFileName = argConfig.outputFile + ".v").generateVerilog {
       // Generate CPU plugin list
@@ -165,6 +170,7 @@ object GenCoreDefault{
             case "small" => CsrPluginConfig.small(mtvecInit = argConfig.machineTrapVector).copy(mtvecAccess = WRITE_ONLY)
             case "all" => CsrPluginConfig.all(mtvecInit = argConfig.machineTrapVector)
             case "linux" => CsrPluginConfig.linuxFull(mtVecInit = argConfig.machineTrapVector).copy(ebreakGen = false)
+            case "linux-minimal" => CsrPluginConfig.linuxMinimal(mtVecInit = argConfig.machineTrapVector).copy(ebreakGen = false)
           }
         ),
         new YamlPlugin(argConfig.outputFile.concat(".yaml"))
@@ -206,7 +212,7 @@ object GenCoreDefault{
       // CPU instantiation
       val cpu = new VexRiscv(cpuConfig)
 
-      // CPU modifications to be an Wishbone one
+      // CPU modifications to be an Wishbone
       cpu.rework {
         for (plugin <- cpuConfig.plugins) plugin match {
           case plugin: IBusSimplePlugin => {
@@ -228,7 +234,26 @@ object GenCoreDefault{
           case _ =>
         }
       }
+
       cpu
     }
   }
+}
+
+
+class ForceRamBlockPhase() extends spinal.core.internals.Phase{
+  override def impl(pc: PhaseContext): Unit = {
+    pc.walkBaseNodes{
+      case mem: Mem[_] => {
+        var asyncRead = false
+        mem.dlcForeach[MemPortStatement]{
+          case _ : MemReadAsync => asyncRead = true
+          case _ =>
+        }
+        if(!asyncRead) mem.addAttribute("ram_style", "block")
+      }
+      case _ =>
+    }
+  }
+  override def hasNetlistImpact: Boolean = false
 }
