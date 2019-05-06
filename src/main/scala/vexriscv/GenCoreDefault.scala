@@ -202,8 +202,10 @@ object GenCoreDefault{
 
       if(argConfig.externalInterruptArray) plugins ++= List(
         new ExternalInterruptArrayPlugin(
-          maskCsrId = 0xBC0,
-          pendingsCsrId = 0xFC0
+          machineMaskCsrId = 0xBC0,
+          machinePendingsCsrId = 0xFC0,
+          supervisorMaskCsrId = 0x9C0,
+          supervisorPendingsCsrId = 0xDC0
         )
       )
 
