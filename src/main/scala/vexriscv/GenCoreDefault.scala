@@ -31,7 +31,9 @@ case class ArgConfig(
   machineTrapVector : BigInt = null,
   prediction : BranchPrediction = STATIC,
   outputFile : String = "VexRiscv",
-  csrPluginConfig : String = "small"
+  csrPluginConfig : String = "small",
+  dBusCachedRelaxedMemoryTranslationRegister : Boolean = false,
+  dBusCachedEarlyWaysHits : Boolean = true
 )
 
 object GenCoreDefault{
@@ -57,6 +59,8 @@ object GenCoreDefault{
       opt[Boolean]("singleCycleMulDiv")    action { (v, c) => c.copy(singleCycleMulDiv = v)   } text("If true, MUL/DIV/Shifts are single-cycle")
       opt[Boolean]("bypass")    action { (v, c) => c.copy(bypass = v)   } text("set pipeline interlock/bypass")
       opt[Boolean]("externalInterruptArray")    action { (v, c) => c.copy(externalInterruptArray = v)   } text("switch between regular CSR and array like one")
+      opt[Boolean]("dBusCachedRelaxedMemoryTranslationRegister")    action { (v, c) => c.copy(dBusCachedRelaxedMemoryTranslationRegister = v)   } text("If set, it give the d$ it's own address register between the execute/memory stage.")
+      opt[Boolean]("dBusCachedEarlyWaysHits")    action { (v, c) => c.copy(dBusCachedEarlyWaysHits = v)   } text("If set, the d$ way hit calculation is done in the memory stage, else in the writeback stage.")
       opt[String]("resetVector")    action { (v, c) => c.copy(resetVector = BigInt(if(v.startsWith("0x")) v.tail.tail else v, 16))   } text("Specify the CPU reset vector in hexadecimal. If not specified, an 32 bits input is added to the CPU to set durring instanciation")
       opt[String]("machineTrapVector")    action { (v, c) => c.copy(machineTrapVector = BigInt(if(v.startsWith("0x")) v.tail.tail else v, 16))   } text("Specify the CPU machine trap vector in hexadecimal. If not specified, it take a unknown value when the design boot")
       opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
@@ -113,6 +117,7 @@ object GenCoreDefault{
             dBusCmdMasterPipe = true,
             dBusCmdSlavePipe = true,
             dBusRspSlavePipe = false,
+            relaxedMemoryTranslationRegister = argConfig.dBusCachedRelaxedMemoryTranslationRegister,
             config = new DataCacheConfig(
               cacheSize = argConfig.dCacheSize,
               bytePerLine = 32,
@@ -124,7 +129,8 @@ object GenCoreDefault{
               catchIllegal = true,
               catchUnaligned = true,
               withLrSc = linux,
-              withAmo = linux
+              withAmo = linux,
+              earlyWaysHits = argConfig.dBusCachedEarlyWaysHits
             ),
             memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4),
             csrInfo = true
@@ -196,8 +202,10 @@ object GenCoreDefault{
 
       if(argConfig.externalInterruptArray) plugins ++= List(
         new ExternalInterruptArrayPlugin(
-          maskCsrId = 0xBC0,
-          pendingsCsrId = 0xFC0
+          machineMaskCsrId = 0xBC0,
+          machinePendingsCsrId = 0xFC0,
+          supervisorMaskCsrId = 0x9C0,
+          supervisorPendingsCsrId = 0xDC0
         )
       )
 
