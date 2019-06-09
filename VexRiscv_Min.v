@@ -1,5 +1,5 @@
 // Generator : SpinalHDL v1.3.5    git head : f0505d24810c8661a24530409359554b7cfa271a
-// Date      : 05/06/2019, 10:31:24
+// Date      : 09/06/2019, 12:34:08
 // Component : VexRiscv
 
 
@@ -419,16 +419,15 @@ module VexRiscv (
   wire [31:0] execute_FORMAL_PC_NEXT;
   wire [31:0] decode_FORMAL_PC_NEXT;
   wire [31:0] decode_RS1;
+  wire  decode_CSR_WRITE_OPCODE;
   wire [31:0] execute_BRANCH_CALC;
   wire [1:0] memory_MEMORY_ADDRESS_LOW;
   wire [1:0] execute_MEMORY_ADDRESS_LOW;
-  wire  decode_CSR_WRITE_OPCODE;
   wire  execute_BRANCH_DO;
   wire `Src1CtrlEnum_defaultEncoding_type decode_SRC1_CTRL;
   wire `Src1CtrlEnum_defaultEncoding_type _zz_1_;
   wire `Src1CtrlEnum_defaultEncoding_type _zz_2_;
   wire `Src1CtrlEnum_defaultEncoding_type _zz_3_;
-  wire  decode_CSR_READ_OPCODE;
   wire [31:0] memory_MEMORY_READ_DATA;
   wire  decode_SRC_LESS_UNSIGNED;
   wire [31:0] writeBack_REGFILE_WRITE_DATA;
@@ -461,6 +460,7 @@ module VexRiscv (
   wire `ShiftCtrlEnum_defaultEncoding_type _zz_22_;
   wire  decode_MEMORY_STORE;
   wire  decode_BYPASSABLE_EXECUTE_STAGE;
+  wire  decode_CSR_READ_OPCODE;
   wire  execute_BYPASSABLE_MEMORY_STAGE;
   wire  decode_BYPASSABLE_MEMORY_STAGE;
   wire `BranchCtrlEnum_defaultEncoding_type decode_BRANCH_CTRL;
@@ -928,9 +928,9 @@ module VexRiscv (
   wire  _zz_155_;
   wire [1:0] _zz_156_;
   wire  _zz_157_;
-  reg  CsrPlugin_interrupt;
-  reg [3:0] CsrPlugin_interruptCode /* verilator public */ ;
-  reg [1:0] CsrPlugin_interruptTargetPrivilege;
+  reg  CsrPlugin_interrupt_valid;
+  reg [3:0] CsrPlugin_interrupt_code /* verilator public */ ;
+  reg [1:0] CsrPlugin_interrupt_targetPrivilege;
   wire  CsrPlugin_exception;
   wire  CsrPlugin_lastStageWasWfi;
   reg  CsrPlugin_pipelineLiberator_done;
@@ -969,6 +969,7 @@ module VexRiscv (
   reg  decode_to_execute_MEMORY_ENABLE;
   reg  execute_to_memory_MEMORY_ENABLE;
   reg  memory_to_writeBack_MEMORY_ENABLE;
+  reg  decode_to_execute_CSR_READ_OPCODE;
   reg  decode_to_execute_BYPASSABLE_EXECUTE_STAGE;
   reg  decode_to_execute_MEMORY_STORE;
   reg  execute_to_memory_MEMORY_STORE;
@@ -993,10 +994,8 @@ module VexRiscv (
   reg [31:0] memory_to_writeBack_REGFILE_WRITE_DATA;
   reg  decode_to_execute_SRC_LESS_UNSIGNED;
   reg [31:0] memory_to_writeBack_MEMORY_READ_DATA;
-  reg  decode_to_execute_CSR_READ_OPCODE;
   reg `Src1CtrlEnum_defaultEncoding_type decode_to_execute_SRC1_CTRL;
   reg  execute_to_memory_BRANCH_DO;
-  reg  decode_to_execute_CSR_WRITE_OPCODE;
   reg  decode_to_execute_SRC_USE_SUB_LESS;
   reg [1:0] execute_to_memory_MEMORY_ADDRESS_LOW;
   reg [1:0] memory_to_writeBack_MEMORY_ADDRESS_LOW;
@@ -1004,6 +1003,7 @@ module VexRiscv (
   reg  execute_to_memory_REGFILE_WRITE_VALID;
   reg  memory_to_writeBack_REGFILE_WRITE_VALID;
   reg [31:0] execute_to_memory_BRANCH_CALC;
+  reg  decode_to_execute_CSR_WRITE_OPCODE;
   reg [31:0] decode_to_execute_RS1;
   reg [31:0] decode_to_execute_FORMAL_PC_NEXT;
   reg [31:0] execute_to_memory_FORMAL_PC_NEXT;
@@ -1970,14 +1970,13 @@ module VexRiscv (
   assign execute_FORMAL_PC_NEXT = decode_to_execute_FORMAL_PC_NEXT;
   assign decode_FORMAL_PC_NEXT = _zz_86_;
   assign decode_RS1 = _zz_52_;
+  assign decode_CSR_WRITE_OPCODE = _zz_29_;
   assign execute_BRANCH_CALC = _zz_31_;
   assign memory_MEMORY_ADDRESS_LOW = execute_to_memory_MEMORY_ADDRESS_LOW;
   assign execute_MEMORY_ADDRESS_LOW = _zz_82_;
-  assign decode_CSR_WRITE_OPCODE = _zz_29_;
   assign execute_BRANCH_DO = _zz_33_;
   assign decode_SRC1_CTRL = _zz_1_;
   assign _zz_2_ = _zz_3_;
-  assign decode_CSR_READ_OPCODE = _zz_28_;
   assign memory_MEMORY_READ_DATA = _zz_73_;
   assign decode_SRC_LESS_UNSIGNED = _zz_67_;
   assign writeBack_REGFILE_WRITE_DATA = memory_to_writeBack_REGFILE_WRITE_DATA;
@@ -1998,6 +1997,7 @@ module VexRiscv (
   assign _zz_21_ = _zz_22_;
   assign decode_MEMORY_STORE = _zz_57_;
   assign decode_BYPASSABLE_EXECUTE_STAGE = _zz_60_;
+  assign decode_CSR_READ_OPCODE = _zz_28_;
   assign execute_BYPASSABLE_MEMORY_STAGE = decode_to_execute_BYPASSABLE_MEMORY_STAGE;
   assign decode_BYPASSABLE_MEMORY_STAGE = _zz_63_;
   assign decode_BRANCH_CTRL = _zz_23_;
@@ -2137,7 +2137,7 @@ module VexRiscv (
     if((decode_arbitration_isValid && (_zz_136_ || _zz_137_)))begin
       decode_arbitration_haltByOther = 1'b1;
     end
-    if(CsrPlugin_interrupt)begin
+    if((CsrPlugin_interrupt_valid && CsrPlugin_allowInterrupts))begin
       decode_arbitration_haltByOther = decode_arbitration_isValid;
     end
     if(({(writeBack_arbitration_isValid && (writeBack_ENV_CTRL == `EnvCtrlEnum_defaultEncoding_XRET)),{(memory_arbitration_isValid && (memory_ENV_CTRL == `EnvCtrlEnum_defaultEncoding_XRET)),(execute_arbitration_isValid && (execute_ENV_CTRL == `EnvCtrlEnum_defaultEncoding_XRET))}} != (3'b000)))begin
@@ -3109,54 +3109,6 @@ module VexRiscv (
   assign CsrPlugin_exceptionPendings_1 = CsrPlugin_exceptionPortCtrl_exceptionValidsRegs_execute;
   assign CsrPlugin_exceptionPendings_2 = CsrPlugin_exceptionPortCtrl_exceptionValidsRegs_memory;
   assign CsrPlugin_exceptionPendings_3 = CsrPlugin_exceptionPortCtrl_exceptionValidsRegs_writeBack;
-  always @ (*) begin
-    CsrPlugin_interrupt = 1'b0;
-    if(_zz_186_)begin
-      if(_zz_187_)begin
-        CsrPlugin_interrupt = 1'b1;
-      end
-      if(_zz_188_)begin
-        CsrPlugin_interrupt = 1'b1;
-      end
-      if(_zz_189_)begin
-        CsrPlugin_interrupt = 1'b1;
-      end
-    end
-    if((! CsrPlugin_allowInterrupts))begin
-      CsrPlugin_interrupt = 1'b0;
-    end
-  end
-
-  always @ (*) begin
-    CsrPlugin_interruptCode = (4'bxxxx);
-    if(_zz_186_)begin
-      if(_zz_187_)begin
-        CsrPlugin_interruptCode = (4'b0111);
-      end
-      if(_zz_188_)begin
-        CsrPlugin_interruptCode = (4'b0011);
-      end
-      if(_zz_189_)begin
-        CsrPlugin_interruptCode = (4'b1011);
-      end
-    end
-  end
-
-  always @ (*) begin
-    CsrPlugin_interruptTargetPrivilege = (2'bxx);
-    if(_zz_186_)begin
-      if(_zz_187_)begin
-        CsrPlugin_interruptTargetPrivilege = (2'b11);
-      end
-      if(_zz_188_)begin
-        CsrPlugin_interruptTargetPrivilege = (2'b11);
-      end
-      if(_zz_189_)begin
-        CsrPlugin_interruptTargetPrivilege = (2'b11);
-      end
-    end
-  end
-
   assign CsrPlugin_exception = (CsrPlugin_exceptionPortCtrl_exceptionValids_writeBack && CsrPlugin_allowException);
   assign CsrPlugin_lastStageWasWfi = 1'b0;
   always @ (*) begin
@@ -3169,16 +3121,16 @@ module VexRiscv (
     end
   end
 
-  assign CsrPlugin_interruptJump = (CsrPlugin_interrupt && CsrPlugin_pipelineLiberator_done);
+  assign CsrPlugin_interruptJump = ((CsrPlugin_interrupt_valid && CsrPlugin_pipelineLiberator_done) && CsrPlugin_allowInterrupts);
   always @ (*) begin
-    CsrPlugin_targetPrivilege = CsrPlugin_interruptTargetPrivilege;
+    CsrPlugin_targetPrivilege = CsrPlugin_interrupt_targetPrivilege;
     if(CsrPlugin_hadException)begin
       CsrPlugin_targetPrivilege = CsrPlugin_exceptionPortCtrl_exceptionTargetPrivilege;
     end
   end
 
   always @ (*) begin
-    CsrPlugin_trapCause = CsrPlugin_interruptCode;
+    CsrPlugin_trapCause = CsrPlugin_interrupt_code;
     if(CsrPlugin_hadException)begin
       CsrPlugin_trapCause = CsrPlugin_exceptionPortCtrl_exceptionContext_code;
     end
@@ -3455,6 +3407,7 @@ module VexRiscv (
       CsrPlugin_exceptionPortCtrl_exceptionValidsRegs_execute <= 1'b0;
       CsrPlugin_exceptionPortCtrl_exceptionValidsRegs_memory <= 1'b0;
       CsrPlugin_exceptionPortCtrl_exceptionValidsRegs_writeBack <= 1'b0;
+      CsrPlugin_interrupt_valid <= 1'b0;
       CsrPlugin_hadException <= 1'b0;
       execute_CsrPlugin_wfiWake <= 1'b0;
       _zz_158_ <= (32'b00000000000000000000000000000000);
@@ -3577,6 +3530,18 @@ module VexRiscv (
         CsrPlugin_exceptionPortCtrl_exceptionValidsRegs_writeBack <= (CsrPlugin_exceptionPortCtrl_exceptionValids_memory && (! memory_arbitration_isStuck));
       end else begin
         CsrPlugin_exceptionPortCtrl_exceptionValidsRegs_writeBack <= 1'b0;
+      end
+      CsrPlugin_interrupt_valid <= 1'b0;
+      if(_zz_186_)begin
+        if(_zz_187_)begin
+          CsrPlugin_interrupt_valid <= 1'b1;
+        end
+        if(_zz_188_)begin
+          CsrPlugin_interrupt_valid <= 1'b1;
+        end
+        if(_zz_189_)begin
+          CsrPlugin_interrupt_valid <= 1'b1;
+        end
       end
       CsrPlugin_hadException <= CsrPlugin_exception;
       if(_zz_172_)begin
@@ -3722,6 +3687,20 @@ module VexRiscv (
       CsrPlugin_exceptionPortCtrl_exceptionContext_code <= (_zz_157_ ? DBusSimplePlugin_memoryExceptionPort_payload_code : BranchPlugin_branchExceptionPort_payload_code);
       CsrPlugin_exceptionPortCtrl_exceptionContext_badAddr <= (_zz_157_ ? DBusSimplePlugin_memoryExceptionPort_payload_badAddr : BranchPlugin_branchExceptionPort_payload_badAddr);
     end
+    if(_zz_186_)begin
+      if(_zz_187_)begin
+        CsrPlugin_interrupt_code <= (4'b0111);
+        CsrPlugin_interrupt_targetPrivilege <= (2'b11);
+      end
+      if(_zz_188_)begin
+        CsrPlugin_interrupt_code <= (4'b0011);
+        CsrPlugin_interrupt_targetPrivilege <= (2'b11);
+      end
+      if(_zz_189_)begin
+        CsrPlugin_interrupt_code <= (4'b1011);
+        CsrPlugin_interrupt_targetPrivilege <= (2'b11);
+      end
+    end
     if(_zz_172_)begin
       case(CsrPlugin_targetPrivilege)
         2'b11 : begin
@@ -3763,6 +3742,9 @@ module VexRiscv (
     end
     if((! writeBack_arbitration_isStuck))begin
       memory_to_writeBack_MEMORY_ENABLE <= memory_MEMORY_ENABLE;
+    end
+    if((! execute_arbitration_isStuck))begin
+      decode_to_execute_CSR_READ_OPCODE <= decode_CSR_READ_OPCODE;
     end
     if((! execute_arbitration_isStuck))begin
       decode_to_execute_BYPASSABLE_EXECUTE_STAGE <= decode_BYPASSABLE_EXECUTE_STAGE;
@@ -3831,16 +3813,10 @@ module VexRiscv (
       memory_to_writeBack_MEMORY_READ_DATA <= memory_MEMORY_READ_DATA;
     end
     if((! execute_arbitration_isStuck))begin
-      decode_to_execute_CSR_READ_OPCODE <= decode_CSR_READ_OPCODE;
-    end
-    if((! execute_arbitration_isStuck))begin
       decode_to_execute_SRC1_CTRL <= _zz_2_;
     end
     if((! memory_arbitration_isStuck))begin
       execute_to_memory_BRANCH_DO <= execute_BRANCH_DO;
-    end
-    if((! execute_arbitration_isStuck))begin
-      decode_to_execute_CSR_WRITE_OPCODE <= decode_CSR_WRITE_OPCODE;
     end
     if((! execute_arbitration_isStuck))begin
       decode_to_execute_SRC_USE_SUB_LESS <= decode_SRC_USE_SUB_LESS;
@@ -3862,6 +3838,9 @@ module VexRiscv (
     end
     if((! memory_arbitration_isStuck))begin
       execute_to_memory_BRANCH_CALC <= execute_BRANCH_CALC;
+    end
+    if((! execute_arbitration_isStuck))begin
+      decode_to_execute_CSR_WRITE_OPCODE <= decode_CSR_WRITE_OPCODE;
     end
     if((! execute_arbitration_isStuck))begin
       decode_to_execute_RS1 <= decode_RS1;
