@@ -33,7 +33,8 @@ case class ArgConfig(
   outputFile : String = "VexRiscv",
   csrPluginConfig : String = "small",
   dBusCachedRelaxedMemoryTranslationRegister : Boolean = false,
-  dBusCachedEarlyWaysHits : Boolean = true
+  dBusCachedEarlyWaysHits : Boolean = true,
+  atomics : Boolean = false
 )
 
 object GenCoreDefault{
@@ -66,6 +67,7 @@ object GenCoreDefault{
       opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
       opt[String]("outputFile")    action { (v, c) => c.copy(outputFile = v) } text("output file name")
       opt[String]("csrPluginConfig")  action { (v, c) => c.copy(csrPluginConfig = v) } text("switch between 'small', 'all', 'linux' and 'linux-minimal' version of control and status registers configuration")
+      opt[Boolean]("atomics")    action { (v, c) => c.copy(atomics = v)   } text("set RV32I[A]")
     }
     val argConfig = parser.parse(args, ArgConfig()).get
     val linux = argConfig.csrPluginConfig.startsWith("linux")
@@ -109,7 +111,7 @@ object GenCoreDefault{
           new DBusSimplePlugin(
             catchAddressMisaligned = true,
             catchAccessFault = true,
-            withLrSc = linux,
+            withLrSc = linux || argConfig.atomics,
             memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4)
           )
         }else {
@@ -128,8 +130,8 @@ object GenCoreDefault{
               catchAccessError = true,
               catchIllegal = true,
               catchUnaligned = true,
-              withLrSc = linux,
-              withAmo = linux,
+              withLrSc = linux || argConfig.atomics,
+              withAmo = linux || argConfig.atomics,
               earlyWaysHits = argConfig.dBusCachedEarlyWaysHits
             ),
             memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4),
