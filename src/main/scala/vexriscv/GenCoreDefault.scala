@@ -24,7 +24,10 @@ case class ArgConfig(
   iCacheSize : Int = 4096,
   dCacheSize : Int = 4096,
   mulDiv : Boolean = true,
+  atomics: Boolean = false,
   singleCycleMulDiv : Boolean = true,
+  singleCycleShift : Boolean = true,
+  earlyBranch : Boolean = false,
   bypass : Boolean = true,
   externalInterruptArray : Boolean = true,
   resetVector : BigInt = null,
@@ -33,8 +36,7 @@ case class ArgConfig(
   outputFile : String = "VexRiscv",
   csrPluginConfig : String = "small",
   dBusCachedRelaxedMemoryTranslationRegister : Boolean = false,
-  dBusCachedEarlyWaysHits : Boolean = true,
-  atomics : Boolean = false
+  dBusCachedEarlyWaysHits : Boolean = true
 )
 
 object GenCoreDefault{
@@ -57,7 +59,9 @@ object GenCoreDefault{
       // ex : -dCacheSize=XXX
       opt[Int]("dCacheSize")     action { (v, c) => c.copy(dCacheSize = v) } text("Set data cache size, 0 mean no cache")
       opt[Boolean]("mulDiv")    action { (v, c) => c.copy(mulDiv = v)   } text("set RV32IM")
-      opt[Boolean]("singleCycleMulDiv")    action { (v, c) => c.copy(singleCycleMulDiv = v)   } text("If true, MUL/DIV/Shifts are single-cycle")
+      opt[Boolean]("singleCycleMulDiv")    action { (v, c) => c.copy(singleCycleMulDiv = v)   } text("If true, MUL/DIV are single-cycle")
+      opt[Boolean]("singleCycleShift")    action { (v, c) => c.copy(singleCycleShift = v)   } text("If true, SHIFTS are single-cycle")
+      opt[Boolean]("earlyBranch")    action { (v, c) => c.copy(earlyBranch = v)   } text("If true, branching is performed in execute stage instead of memory stage")
       opt[Boolean]("bypass")    action { (v, c) => c.copy(bypass = v)   } text("set pipeline interlock/bypass")
       opt[Boolean]("externalInterruptArray")    action { (v, c) => c.copy(externalInterruptArray = v)   } text("switch between regular CSR and array like one")
       opt[Boolean]("dBusCachedRelaxedMemoryTranslationRegister")    action { (v, c) => c.copy(dBusCachedRelaxedMemoryTranslationRegister = v)   } text("If set, it give the d$ it's own address register between the execute/memory stage.")
@@ -83,14 +87,14 @@ object GenCoreDefault{
             prediction = argConfig.prediction,
             cmdForkOnSecondStage = false,
             cmdForkPersistence = false, //Not required as the wishbone bridge ensure it
-            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4)
+            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4) else null
           )
         }else {
           new IBusCachedPlugin(
             resetVector = argConfig.resetVector,
             relaxedPcCalculation = false,
             prediction = argConfig.prediction,
-            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4),
+            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4) else null,
             config = InstructionCacheConfig(
               cacheSize = argConfig.iCacheSize,
               bytePerLine = 32,
@@ -112,7 +116,7 @@ object GenCoreDefault{
             catchAddressMisaligned = true,
             catchAccessFault = true,
             withLrSc = linux || argConfig.atomics,
-            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4)
+            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4) else null
           )
         }else {
           new DBusCachedPlugin(
@@ -134,7 +138,7 @@ object GenCoreDefault{
               withAmo = linux || argConfig.atomics,
               earlyWaysHits = argConfig.dBusCachedEarlyWaysHits
             ),
-            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4),
+            memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4) else null,
             csrInfo = true
           )
         },
@@ -155,7 +159,7 @@ object GenCoreDefault{
           separatedAddSub = false,
           executeInsertion = true
         ),
-        if(argConfig.singleCycleMulDiv) {
+        if(argConfig.singleCycleShift) {
           new FullBarrelShifterPlugin
         }else {
           new LightShifterPlugin
@@ -170,7 +174,7 @@ object GenCoreDefault{
           pessimisticAddressMatch = false
         ),
         new BranchPlugin(
-          earlyBranch = false,
+          earlyBranch = argConfig.earlyBranch,
           catchAddressMisaligned = true
         ),
         new CsrPlugin(
