@@ -33,4 +33,4 @@ VexRiscv_LinuxDebug.v: $(SRC)
 	sbt compile "runMain vexriscv.GenCoreDefault --csrPluginConfig linux-minimal -d --outputFile VexRiscv_LinuxDebug"
 
 VexRiscv_IMA.v: $(SRC)
-	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --outputFile VexRiscv_IMA"
+	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --prediction dynamic_target --dCacheSize 8192 --iCacheSize 8192 --earlyBranch true --outputFile VexRiscv_IMA"
