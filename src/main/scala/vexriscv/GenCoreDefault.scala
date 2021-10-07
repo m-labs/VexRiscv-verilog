@@ -23,6 +23,7 @@ case class ArgConfig(
   debug : Boolean = false,
   iCacheSize : Int = 4096,
   dCacheSize : Int = 4096,
+  pmpRegions : Int = 0,
   mulDiv : Boolean = true,
   atomics: Boolean = false,
   singleCycleMulDiv : Boolean = true,
@@ -58,6 +59,7 @@ object GenCoreDefault{
       opt[Int]("iCacheSize")     action { (v, c) => c.copy(iCacheSize = v) } text("Set instruction cache size, 0 mean no cache")
       // ex : -dCacheSize=XXX
       opt[Int]("dCacheSize")     action { (v, c) => c.copy(dCacheSize = v) } text("Set data cache size, 0 mean no cache")
+      opt[Int]("pmpRegions")    action { (v, c) => c.copy(pmpRegions = v)   } text("Number of PMP regions, 0 disables PMP")
       opt[Boolean]("mulDiv")    action { (v, c) => c.copy(mulDiv = v)   } text("set RV32IM")
       opt[Boolean]("singleCycleMulDiv")    action { (v, c) => c.copy(singleCycleMulDiv = v)   } text("If true, MUL/DIV are single-cycle")
       opt[Boolean]("singleCycleShift")    action { (v, c) => c.copy(singleCycleShift = v)   } text("If true, SHIFTS are single-cycle")
@@ -144,7 +146,9 @@ object GenCoreDefault{
         },
         if(linux) new MmuPlugin(
           ioRange = (x => x(31 downto 28) === 0xB || x(31 downto 28) === 0xE || x(31 downto 28) === 0xF)
-        )  else new StaticMemoryTranslatorPlugin(
+        ) else if (argConfig.pmpRegions > 0) new PmpPluginOld(
+          regions = argConfig.pmpRegions, ioRange = _.msb
+        ) else new StaticMemoryTranslatorPlugin(
           ioRange      = _.msb
         ),
         new DecoderSimplePlugin(
@@ -180,6 +184,7 @@ object GenCoreDefault{
         new CsrPlugin(
           argConfig.csrPluginConfig match {
             case "small" => CsrPluginConfig.small(mtvecInit = argConfig.machineTrapVector).copy(mtvecAccess = WRITE_ONLY)
+            case "secure" => CsrPluginConfig.secure(mtvecInit = argConfig.machineTrapVector)
             case "all" => CsrPluginConfig.all(mtvecInit = argConfig.machineTrapVector)
             case "linux" => CsrPluginConfig.linuxFull(mtVecInit = argConfig.machineTrapVector).copy(ebreakGen = false)
             case "linux-minimal" => CsrPluginConfig.linuxMinimal(mtVecInit = argConfig.machineTrapVector).copy(ebreakGen = false)
