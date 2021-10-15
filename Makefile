@@ -35,3 +35,5 @@ VexRiscv_LinuxDebug.v: $(SRC)
 VexRiscv_IMA.v: $(SRC)
 	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --prediction dynamic_target --dCacheSize 8192 --iCacheSize 8192 --earlyBranch true --pmpRegions 16 --csrPluginConfig secure --outputFile VexRiscv_IMA"
 
+VexRiscv_G.v: $(SRC)
+	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --prediction dynamic_target --dCacheSize 8192 --iCacheSize 8192 --earlyBranch true --fpu true --withDouble true --pmpRegions 16 --csrPluginConfig secure --outputFile VexRiscv_G"
