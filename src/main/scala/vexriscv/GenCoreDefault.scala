@@ -5,6 +5,7 @@ import spinal.core.internals.{ExpressionContainer, PhaseAllocateNames, PhaseCont
 import spinal.lib._
 import spinal.lib.sim.Phase
 import vexriscv.ip.{DataCacheConfig, InstructionCacheConfig}
+import vexriscv.ip.fpu.FpuParameter
 import vexriscv.plugin.CsrAccess.WRITE_ONLY
 import vexriscv.plugin._
 
@@ -26,6 +27,8 @@ case class ArgConfig(
   pmpRegions : Int = 0,
   mulDiv : Boolean = true,
   atomics: Boolean = false,
+  fpu    : Boolean = false,
+  withDouble: Boolean = false,
   singleCycleMulDiv : Boolean = true,
   singleCycleShift : Boolean = true,
   earlyBranch : Boolean = false,
@@ -74,9 +77,12 @@ object GenCoreDefault{
       opt[String]("outputFile")    action { (v, c) => c.copy(outputFile = v) } text("output file name")
       opt[String]("csrPluginConfig")  action { (v, c) => c.copy(csrPluginConfig = v) } text("switch between 'small', 'all', 'linux' and 'linux-minimal' version of control and status registers configuration")
       opt[Boolean]("atomics")    action { (v, c) => c.copy(atomics = v)   } text("set RV32I[A]")
+      opt[Boolean]("fpu")    action { (v, c) => c.copy(fpu = v)   } text("set RV32I[F]")
+      opt[Boolean]("withDouble")    action { (v, c) => c.copy(withDouble = v)   } text("set RV32I[D] instead of RV32I[F]")
     }
     val argConfig = parser.parse(args, ArgConfig()).get
     val linux = argConfig.csrPluginConfig.startsWith("linux")
+    val widened_bus = argConfig.fpu && argConfig.withDouble
 
     SpinalConfig.copy(netlistFileName = argConfig.outputFile + ".v").generateVerilog {
       // Generate CPU plugin list
@@ -99,11 +105,11 @@ object GenCoreDefault{
             memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4) else null,
             config = InstructionCacheConfig(
               cacheSize = argConfig.iCacheSize,
-              bytePerLine = 32,
+              bytePerLine = if(widened_bus) 64 else 32,
               wayCount = 1,
               addressWidth = 32,
               cpuDataWidth = 32,
-              memDataWidth = 32,
+              memDataWidth = if(widened_bus) 64 else 32,
               catchIllegalAccess = true,
               catchAccessFault = true,
               asyncTagMemory = false,
@@ -124,21 +130,22 @@ object GenCoreDefault{
           new DBusCachedPlugin(
             dBusCmdMasterPipe = true,
             dBusCmdSlavePipe = true,
-            dBusRspSlavePipe = false,
+            dBusRspSlavePipe = widened_bus,
             relaxedMemoryTranslationRegister = argConfig.dBusCachedRelaxedMemoryTranslationRegister,
             config = new DataCacheConfig(
               cacheSize = argConfig.dCacheSize,
-              bytePerLine = 32,
+              bytePerLine = if(widened_bus) 64 else 32,
               wayCount = 1,
               addressWidth = 32,
-              cpuDataWidth = 32,
-              memDataWidth = 32,
+              cpuDataWidth = if(widened_bus) 64 else 32,
+              memDataWidth = if(widened_bus) 64 else 32,
               catchAccessError = true,
               catchIllegal = true,
               catchUnaligned = true,
               withLrSc = linux || argConfig.atomics,
               withAmo = linux || argConfig.atomics,
-              earlyWaysHits = argConfig.dBusCachedEarlyWaysHits
+              earlyWaysHits = argConfig.dBusCachedEarlyWaysHits,
+              withWriteAggregation = widened_bus
             ),
             memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4) else null,
             csrInfo = true
@@ -209,6 +216,17 @@ object GenCoreDefault{
             )
           )
         }
+      }
+
+      if(argConfig.fpu) {
+        plugins ++= List(
+          new FpuPlugin(
+            externalFpu = false,
+            p = new FpuParameter(
+              withDouble = argConfig.withDouble
+            )
+          )
+        )
       }
 
       if(argConfig.externalInterruptArray) plugins ++= List(
