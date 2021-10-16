@@ -3,4 +3,4 @@
 	url = https://github.com/SpinalHDL/VexRiscv
 [submodule "ext/SpinalHDL"]
 	path = ext/SpinalHDL
-	url = git@github.com:SpinalHDL/SpinalHDL.git
+	url = https://github.com/SpinalHDL/SpinalHDL
