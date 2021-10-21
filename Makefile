@@ -33,7 +33,11 @@ VexRiscv_LinuxDebug.v: $(SRC)
 	sbt compile "runMain vexriscv.GenCoreDefault --csrPluginConfig linux-minimal -d --outputFile VexRiscv_LinuxDebug"
 
 VexRiscv_IMA.v: $(SRC)
+	git apply --directory ext/VexRiscv pmp.patch
 	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --prediction dynamic_target --dCacheSize 8192 --iCacheSize 8192 --earlyBranch true --pmpRegions 4 --pmpGranularity 4096 --csrPluginConfig secure --outputFile VexRiscv_IMA"
+	git apply --directory ext/VexRiscv -R pmp.patch
 
 VexRiscv_G.v: $(SRC)
+	git apply --directory ext/VexRiscv pmp.patch
 	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --prediction dynamic_target --dCacheSize 8192 --iCacheSize 8192 --earlyBranch true --fpu true --withDouble true --pmpRegions 4 --pmpGranularity 4096 --csrPluginConfig secure --outputFile VexRiscv_G"
+	git apply --directory ext/VexRiscv -R pmp.patch
