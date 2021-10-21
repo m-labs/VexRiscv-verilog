@@ -25,6 +25,7 @@ case class ArgConfig(
   iCacheSize : Int = 4096,
   dCacheSize : Int = 4096,
   pmpRegions : Int = 0,
+  pmpGranularity : Int = 256,
   mulDiv : Boolean = true,
   atomics: Boolean = false,
   fpu    : Boolean = false,
@@ -63,6 +64,7 @@ object GenCoreDefault{
       // ex : -dCacheSize=XXX
       opt[Int]("dCacheSize")     action { (v, c) => c.copy(dCacheSize = v) } text("Set data cache size, 0 mean no cache")
       opt[Int]("pmpRegions")    action { (v, c) => c.copy(pmpRegions = v)   } text("Number of PMP regions, 0 disables PMP")
+      opt[Int]("pmpGranularity")    action { (v, c) => c.copy(pmpGranularity = v)   } text("Granularity of PMP regions (in bytes)")
       opt[Boolean]("mulDiv")    action { (v, c) => c.copy(mulDiv = v)   } text("set RV32IM")
       opt[Boolean]("singleCycleMulDiv")    action { (v, c) => c.copy(singleCycleMulDiv = v)   } text("If true, MUL/DIV are single-cycle")
       opt[Boolean]("singleCycleShift")    action { (v, c) => c.copy(singleCycleShift = v)   } text("If true, SHIFTS are single-cycle")
@@ -153,8 +155,8 @@ object GenCoreDefault{
         },
         if(linux) new MmuPlugin(
           ioRange = (x => x(31 downto 28) === 0xB || x(31 downto 28) === 0xE || x(31 downto 28) === 0xF)
-        ) else if (argConfig.pmpRegions > 0) new PmpPluginOld(
-          regions = argConfig.pmpRegions, ioRange = _.msb
+        ) else if (argConfig.pmpRegions > 0) new PmpPlugin(
+          regions = argConfig.pmpRegions, granularity = argConfig.pmpGranularity, ioRange = _.msb
         ) else new StaticMemoryTranslatorPlugin(
           ioRange      = _.msb
         ),
