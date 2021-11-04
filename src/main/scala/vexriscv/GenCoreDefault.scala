@@ -40,6 +40,7 @@ case class ArgConfig(
   machineTrapVector : BigInt = null,
   prediction : BranchPrediction = STATIC,
   outputFile : String = "VexRiscv",
+  privateNamespace : Boolean = false,
   csrPluginConfig : String = "small",
   dBusCachedRelaxedMemoryTranslationRegister : Boolean = false,
   dBusCachedEarlyWaysHits : Boolean = true
@@ -79,6 +80,7 @@ object GenCoreDefault{
       opt[String]("machineTrapVector")    action { (v, c) => c.copy(machineTrapVector = BigInt(if(v.startsWith("0x")) v.tail.tail else v, 16))   } text("Specify the CPU machine trap vector in hexadecimal. If not specified, it take a unknown value when the design boot")
       opt[String]("prediction")    action { (v, c) => c.copy(prediction = predictionMap(v))   } text("switch between regular CSR and array like one")
       opt[String]("outputFile")    action { (v, c) => c.copy(outputFile = v) } text("output file name")
+      opt[Boolean]("privateNamespace")    action { (v, c) => c.copy(privateNamespace = v)   } text("use a private namespace")
       opt[String]("csrPluginConfig")  action { (v, c) => c.copy(csrPluginConfig = v) } text("switch between 'small', 'all', 'linux' and 'linux-minimal' version of control and status registers configuration")
       opt[Boolean]("atomics")    action { (v, c) => c.copy(atomics = v)   } text("set RV32I[A]")
       opt[Boolean]("fpu")    action { (v, c) => c.copy(fpu = v)   } text("set RV32I[F]")
@@ -88,7 +90,7 @@ object GenCoreDefault{
     val linux = argConfig.csrPluginConfig.startsWith("linux")
     val widened_bus = argConfig.fpu && argConfig.withDouble || argConfig.widenedBus
 
-    SpinalConfig.copy(netlistFileName = argConfig.outputFile + ".v").generateVerilog {
+    SpinalConfig.copy(netlistFileName = argConfig.outputFile + ".v", privateNamespace=argConfig.privateNamespace).generateVerilog {
       // Generate CPU plugin list
       val plugins = ArrayBuffer[Plugin[VexRiscv]]()
 
@@ -252,6 +254,11 @@ object GenCoreDefault{
 
       // CPU instantiation
       val cpu = new VexRiscv(cpuConfig)
+
+      // Rename CPU to variant name, to avoid confusion
+      if (argConfig.privateNamespace) {
+        cpu.setDefinitionName(argConfig.outputFile)
+      }
 
       // CPU modifications to be an Wishbone
       cpu.rework {
