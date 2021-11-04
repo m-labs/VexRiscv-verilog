@@ -132,7 +132,7 @@ object GenCoreDefault{
           new DBusCachedPlugin(
             dBusCmdMasterPipe = true,
             dBusCmdSlavePipe = true,
-            dBusRspSlavePipe = widened_bus,
+            dBusRspSlavePipe = false,
             relaxedMemoryTranslationRegister = argConfig.dBusCachedRelaxedMemoryTranslationRegister,
             config = new DataCacheConfig(
               cacheSize = argConfig.dCacheSize,
@@ -147,7 +147,7 @@ object GenCoreDefault{
               withLrSc = linux || argConfig.atomics,
               withAmo = linux || argConfig.atomics,
               earlyWaysHits = argConfig.dBusCachedEarlyWaysHits,
-              withWriteAggregation = widened_bus
+              withWriteAggregation = false
             ),
             memoryTranslatorPortConfig = if(linux) MmuPortConfig(portTlbSize = 4) else null,
             csrInfo = true
