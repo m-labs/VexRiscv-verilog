@@ -24,6 +24,7 @@ case class ArgConfig(
   debug : Boolean = false,
   iCacheSize : Int = 4096,
   dCacheSize : Int = 4096,
+  widenedBus : Boolean = false,
   pmpRegions : Int = 0,
   pmpGranularity : Int = 256,
   mulDiv : Boolean = true,
@@ -63,6 +64,7 @@ object GenCoreDefault{
       opt[Int]("iCacheSize")     action { (v, c) => c.copy(iCacheSize = v) } text("Set instruction cache size, 0 mean no cache")
       // ex : -dCacheSize=XXX
       opt[Int]("dCacheSize")     action { (v, c) => c.copy(dCacheSize = v) } text("Set data cache size, 0 mean no cache")
+      opt[Boolean]("widenedBus") action { (v, c) => c.copy(widenedBus = v) } text("Enable 64-bits D$/I$")
       opt[Int]("pmpRegions")    action { (v, c) => c.copy(pmpRegions = v)   } text("Number of PMP regions, 0 disables PMP")
       opt[Int]("pmpGranularity")    action { (v, c) => c.copy(pmpGranularity = v)   } text("Granularity of PMP regions (in bytes)")
       opt[Boolean]("mulDiv")    action { (v, c) => c.copy(mulDiv = v)   } text("set RV32IM")
@@ -84,7 +86,7 @@ object GenCoreDefault{
     }
     val argConfig = parser.parse(args, ArgConfig()).get
     val linux = argConfig.csrPluginConfig.startsWith("linux")
-    val widened_bus = argConfig.fpu && argConfig.withDouble
+    val widened_bus = argConfig.fpu && argConfig.withDouble || argConfig.widenedBus
 
     SpinalConfig.copy(netlistFileName = argConfig.outputFile + ".v").generateVerilog {
       // Generate CPU plugin list
