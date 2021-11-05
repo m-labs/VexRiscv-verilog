@@ -33,7 +33,10 @@ VexRiscv_LinuxDebug.v: $(SRC)
 	sbt compile "runMain vexriscv.GenCoreDefault --csrPluginConfig linux-minimal -d --outputFile VexRiscv_LinuxDebug"
 
 VexRiscv_IMA.v: $(SRC)
-	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --prediction dynamic_target --dCacheSize 8192 --iCacheSize 8192 --earlyBranch true --pmpRegions 4 --pmpGranularity 4096 --csrPluginConfig secure --outputFile VexRiscv_IMA"
+	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --prediction dynamic_target --dCacheSize 8192 --iCacheSize 8192 --earlyBranch true --pmpRegions 4 --pmpGranularity 4096 --csrPluginConfig secure --outputFile VexRiscv_IMA --privateNamespace true"
+
+VexRiscv_IMA_wide.v: $(SRC)
+	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --prediction dynamic_target --dCacheSize 8192 --iCacheSize 8192 --earlyBranch true --widenedBus true --pmpRegions 4 --pmpGranularity 4096 --csrPluginConfig secure --outputFile VexRiscv_IMA_wide --privateNamespace true"
 
 VexRiscv_G.v: $(SRC)
-	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --prediction dynamic_target --dCacheSize 8192 --iCacheSize 8192 --earlyBranch true --fpu true --withDouble true --pmpRegions 4 --pmpGranularity 4096 --csrPluginConfig secure --outputFile VexRiscv_G"
+	sbt compile "runMain vexriscv.GenCoreDefault --atomics true --prediction dynamic_target --dCacheSize 8192 --iCacheSize 8192 --earlyBranch true --fpu true --withDouble true --pmpRegions 4 --pmpGranularity 4096 --csrPluginConfig secure --outputFile VexRiscv_G --privateNamespace true"
