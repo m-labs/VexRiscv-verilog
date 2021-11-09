@@ -1,6 +1,6 @@
 // Generator : SpinalHDL v1.6.1    git head : 9e5c59f90bab017bb3c27775f9312dc325468803
 // Component : VexRiscv_G
-// Git hash  : dd845d0e74a88b313e8864c8f949c8ba86e7cedf
+// Git hash  : 7c1ff3c46928898f805621bebba4e1c305c5c5ca
 
 `timescale 1ns/1ps 
 
@@ -18172,13 +18172,6 @@ module VexRiscv_G_InstructionCache (
   wire                fetchStage_read_waysValues_0_tag_error;
   wire       [18:0]   fetchStage_read_waysValues_0_tag_address;
   wire       [20:0]   _zz_fetchStage_read_waysValues_0_tag_valid_2;
-  wire                fetchStage_hit_hits_0;
-  wire                fetchStage_hit_valid;
-  wire                fetchStage_hit_error;
-  wire       [31:0]   fetchStage_hit_data;
-  wire       [31:0]   fetchStage_hit_word;
-  wire                when_InstructionCache_l435;
-  reg        [31:0]   io_cpu_fetch_data_regNextWhen;
   wire                when_InstructionCache_l459;
   reg        [31:0]   decodeStage_mmuRsp_physicalAddress;
   reg                 decodeStage_mmuRsp_isIoAccess;
@@ -18190,9 +18183,14 @@ module VexRiscv_G_InstructionCache (
   reg                 decodeStage_mmuRsp_refilling;
   reg                 decodeStage_mmuRsp_bypassTranslation;
   wire                when_InstructionCache_l459_1;
-  reg                 decodeStage_hit_valid;
+  reg                 decodeStage_hit_tags_0_valid;
+  reg                 decodeStage_hit_tags_0_error;
+  reg        [18:0]   decodeStage_hit_tags_0_address;
+  wire                decodeStage_hit_hits_0;
+  wire                decodeStage_hit_valid;
   wire                when_InstructionCache_l459_2;
-  reg                 decodeStage_hit_error;
+  reg        [31:0]   _zz_decodeStage_hit_data;
+  wire       [31:0]   decodeStage_hit_data;
   (* ram_style = "block" *) reg [63:0] banks_0 [0:1023];
   (* ram_style = "block" *) reg [20:0] ways_0_tags [0:127];
 
@@ -18306,20 +18304,17 @@ module VexRiscv_G_InstructionCache (
   assign fetchStage_read_waysValues_0_tag_valid = _zz_fetchStage_read_waysValues_0_tag_valid_2[0];
   assign fetchStage_read_waysValues_0_tag_error = _zz_fetchStage_read_waysValues_0_tag_valid_2[1];
   assign fetchStage_read_waysValues_0_tag_address = _zz_fetchStage_read_waysValues_0_tag_valid_2[20 : 2];
-  assign fetchStage_hit_hits_0 = (fetchStage_read_waysValues_0_tag_valid && (fetchStage_read_waysValues_0_tag_address == io_cpu_fetch_mmuRsp_physicalAddress[31 : 13]));
-  assign fetchStage_hit_valid = (|fetchStage_hit_hits_0);
-  assign fetchStage_hit_error = fetchStage_read_waysValues_0_tag_error;
-  assign fetchStage_hit_data = fetchStage_read_banksValue_0_data;
-  assign fetchStage_hit_word = fetchStage_hit_data;
-  assign io_cpu_fetch_data = fetchStage_hit_word;
-  assign when_InstructionCache_l435 = (! io_cpu_decode_isStuck);
-  assign io_cpu_decode_data = io_cpu_fetch_data_regNextWhen;
+  assign io_cpu_fetch_data = fetchStage_read_banksValue_0_data;
   assign io_cpu_fetch_physicalAddress = io_cpu_fetch_mmuRsp_physicalAddress;
   assign when_InstructionCache_l459 = (! io_cpu_decode_isStuck);
   assign when_InstructionCache_l459_1 = (! io_cpu_decode_isStuck);
+  assign decodeStage_hit_hits_0 = (decodeStage_hit_tags_0_valid && (decodeStage_hit_tags_0_address == decodeStage_mmuRsp_physicalAddress[31 : 13]));
+  assign decodeStage_hit_valid = (|decodeStage_hit_hits_0);
   assign when_InstructionCache_l459_2 = (! io_cpu_decode_isStuck);
+  assign decodeStage_hit_data = _zz_decodeStage_hit_data;
+  assign io_cpu_decode_data = decodeStage_hit_data;
   assign io_cpu_decode_cacheMiss = (! decodeStage_hit_valid);
-  assign io_cpu_decode_error = (decodeStage_hit_error || ((! decodeStage_mmuRsp_isPaging) && (decodeStage_mmuRsp_exception || (! decodeStage_mmuRsp_allowExecute))));
+  assign io_cpu_decode_error = (decodeStage_hit_tags_0_error || ((! decodeStage_mmuRsp_isPaging) && (decodeStage_mmuRsp_exception || (! decodeStage_mmuRsp_allowExecute))));
   assign io_cpu_decode_mmuRefilling = decodeStage_mmuRsp_refilling;
   assign io_cpu_decode_mmuException = (((! decodeStage_mmuRsp_refilling) && decodeStage_mmuRsp_isPaging) && (decodeStage_mmuRsp_exception || (! decodeStage_mmuRsp_allowExecute)));
   assign io_cpu_decode_physicalAddress = decodeStage_mmuRsp_physicalAddress;
@@ -18372,9 +18367,6 @@ module VexRiscv_G_InstructionCache (
     if(when_InstructionCache_l351) begin
       lineLoader_flushCounter <= 8'h0;
     end
-    if(when_InstructionCache_l435) begin
-      io_cpu_fetch_data_regNextWhen <= io_cpu_fetch_data;
-    end
     if(when_InstructionCache_l459) begin
       decodeStage_mmuRsp_physicalAddress <= io_cpu_fetch_mmuRsp_physicalAddress;
       decodeStage_mmuRsp_isIoAccess <= io_cpu_fetch_mmuRsp_isIoAccess;
@@ -18387,10 +18379,12 @@ module VexRiscv_G_InstructionCache (
       decodeStage_mmuRsp_bypassTranslation <= io_cpu_fetch_mmuRsp_bypassTranslation;
     end
     if(when_InstructionCache_l459_1) begin
-      decodeStage_hit_valid <= fetchStage_hit_valid;
+      decodeStage_hit_tags_0_valid <= fetchStage_read_waysValues_0_tag_valid;
+      decodeStage_hit_tags_0_error <= fetchStage_read_waysValues_0_tag_error;
+      decodeStage_hit_tags_0_address <= fetchStage_read_waysValues_0_tag_address;
     end
     if(when_InstructionCache_l459_2) begin
-      decodeStage_hit_error <= fetchStage_hit_error;
+      _zz_decodeStage_hit_data <= fetchStage_read_banksValue_0_data;
     end
   end
 
