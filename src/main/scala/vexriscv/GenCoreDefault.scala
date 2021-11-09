@@ -119,7 +119,7 @@ object GenCoreDefault{
               catchIllegalAccess = true,
               catchAccessFault = true,
               asyncTagMemory = false,
-              twoCycleRam = false,
+              twoCycleRam = argConfig.fpu && argConfig.withDouble,
               twoCycleCache = true
             )
           )
